@@ -29,60 +29,65 @@ class ListView(View):
     def get(self, request):
         data = json.loads(request.body)
         try:
-            category = data['category']
+            selected_category = data['category']
             '''
-            results = [{
-                'id' : 1,
-                'image' : 'https://www.abcd',
-                'brandName' : 'HAY',
-                'productName' : '팔리사이드 쉐이즈 롱_올리브',
-                'price': 100000
+            product_list = [{
+                'id'         : 5,
+                'image'      : 'https://www.abcd',
+                'brandName'  : 'HAY',
+                'productName': '팔리사이드 쉐이즈 롱_올리브',
+                'price'      : 100000
             }]
             '''
 
             main_categories = Category.objects.all()
-            # QuerySet: [ {'id':1, 'name':'소파'},
-            #             {'id':2, 'name':'체어'},
+            # QuerySet: [ <'id':1, 'name':'소파'>,
+            #             <'id':2, 'name':'체어'>,
             #             ... ]
             sub_categories = SubCategory.objects.all()
-            # QuerySet: [ {'id':1, 'name':'라운지 체어'},
-            #             {'id':2, 'name':'바 체어'},
-            #             {'id':3, 'name':'키즈 체어'},
+            # QuerySet: [ <'id':1, 'name':'라운지 체어'>,
+            #             <'id':2, 'name':'바 체어'>,
+            #             <'id':3, 'name':'키즈 체어'>,
             #             ... ]
-            if data['category'] in [category['name'] for category in main_categories]:
+            if selected_category in [category.name for category in main_categories]:
                 subs = SubCategory.objects.filter(
-                    category__name=data['category'])
+                    category__name=selected_category)
                 sub_list = []
                 for sub in subs:
-                    sub_list.append(sub['name'])
-
+                    sub_list.append(sub.name)
                 products = Product.objects.filter(
-                    sub_category__category__name=data['category'])
+                    sub_category__category__name=selected_category)
+
                 product_list = []
                 for product in products:
                     product_list.append({
                         'id': product.id,
                         'image': product.thumbnail_image_url,
-                        'brandName': product.furniture.brand,
-                        'productName': product.furniture.name + '_' + product.color.name,  # 가능????????
+                        'brandName': product.furniture.brand.name,
+                        'productName': product.furniture.name + '_' + product.color.name,  # 가능? 오 된다
                         'price': product.price
                     })
+                print(product_list)
                 return JsonResponse({'message': 'SUCCESS', 'sub_list': sub_list, 'product_list': product_list}, status=200)
-            elif data['category'] in [category['name'] for category in sub_categories]:
+            elif selected_category in [category.name for category in sub_categories]:
                 products = Product.objects.filter(
-                    sub_category__name=data['category'])
+                    sub_category__name=selected_category)
                 product_list = []
                 for product in products:
                     product_list.append({
                         'id': product.id,
                         'image': product.thumbnail_image_url,
-                        'brandName': product.furniture.brand,
-                        'productName': product.furniture.name + '_' + product.color.name,  # 가능????????
+                        'brandName': product.furniture.brand.name,
+                        'productName': product.furniture.name + '_' + product.color.name,
                         'price': product.price
                     })
                 return JsonResponse({'message': 'SUCCESS', 'product_list': product_list}, status=200)
+            else:
+                return JsonResponse({'message': 'INVALID_CATEGORY'}, status=400)
         except KeyError:
             return JsonResponse({'message': 'KEY_ERROR'}, status=400)
 
 
-# class DetailView(View):
+class DetailView(View):
+    def get(self, request):
+        return JsonResponse()
