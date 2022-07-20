@@ -27,8 +27,8 @@ class ListView(View):
     '''
 
     def get(self, request):
-        data = json.loads(request.body)
         try:
+            data = json.loads(request.body)
             selected_category = data['category']
             '''
             product_list = [{
@@ -67,7 +67,6 @@ class ListView(View):
                         'productName': product.furniture.name + '_' + product.color.name,  # 가능? 오 된다
                         'price': product.price
                     })
-                print(product_list)
                 return JsonResponse({'message': 'SUCCESS', 'sub_list': sub_list, 'product_list': product_list}, status=200)
             elif selected_category in [category.name for category in sub_categories]:
                 products = Product.objects.filter(
@@ -86,8 +85,25 @@ class ListView(View):
                 return JsonResponse({'message': 'INVALID_CATEGORY'}, status=400)
         except KeyError:
             return JsonResponse({'message': 'KEY_ERROR'}, status=400)
-
+        except json.JSONDecodeError:
+            return JsonResponse({'message': 'JSON_ERROR'}, status=400)
 
 class DetailView(View):
+    '''
+    목적: 사용자가 선택한 제품(product)의 상세정보를 보내준다.
+    1. client가 보내온 데이터에서 제품아이디를 받아온다.
+    2. 요청받은 product_id에 해당하는 상제 정보를 DB에서 찾는다.
+    3. 찾은 데이터를 반환한다.
+    '''
     def get(self, request):
-        return JsonResponse()
+        try:
+            data = json.loads(request.body)
+            '''
+            result = []
+            '''
+        
+           
+        except KeyError:
+            return JsonResponse({'message': 'KEY_ERROR'}, status=400)
+        except json.JSONDecodeError:
+            return JsonResponse({'message': 'JSON_ERROR'}, status=400)
