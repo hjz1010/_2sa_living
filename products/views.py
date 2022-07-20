@@ -1,9 +1,9 @@
 import json
-from django.http import JsonResponse
 
+from django.http import JsonResponse
 from django.views import View
 
-from .models import Category, SubCategory, Product
+from .models import Category, Furniture, SubCategory, Product
 
 
 class ListView(View):
@@ -100,10 +100,52 @@ class DetailView(View):
     def get(self, request):
         try:
             data = json.loads(request.body)
+
+            product_id = data['product_id']
+            product = Product.objects.get(id=product_id)
+
+            description = [
+                {
+                    "english_name": product.furniture.engilsh_name + '_' + product.color.english_name,
+                    'name': product.furniture.korean_name + '_' + product.color.korean_name,
+                    'main_image': product.main_image_url,
+                    'detail_image': product.detail_image.image_url,
+                }]
+
+            related_products = Product.objects.filter(
+                Furniture_id=product.furniture_id)
+
+            related_product_list = []
+            for related_product in related_products:
+                related_product_list.append({
+                    'color': related_product.color.korean_name,
+                    'price': related_product.price
+                })
+
+            return JsonResponse({'description': description, 'related_products': related_product_list}, status=200)
+
             '''
-            result = [
-                {},
-                ... ]
+            'description' : [
+                {
+                    "english_name": 'Puff Puff Sofa' + '_' + 'Red',
+                    'name'        : '퍼프 퍼프 소파' + '_' + '레드',
+                    'main_image'  : 'https://aaaaaa',
+                    'detail_image': 'https://bbbbb',
+                }],
+            'related_products' : [
+                {
+                    'color' : '레드',
+                    'price' : 1000000
+                },
+                {
+                    'color' : '화이트',
+                    'price' : 1100000
+                },
+                {
+                    'color' : '블랙',
+                    'price' : 1500000
+                }
+            ]
             '''
 
         except KeyError:
