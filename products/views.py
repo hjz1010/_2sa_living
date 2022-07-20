@@ -88,6 +88,7 @@ class ListView(View):
         except json.JSONDecodeError:
             return JsonResponse({'message': 'JSON_ERROR'}, status=400)
 
+
 class DetailView(View):
     '''
     목적: 사용자가 선택한 제품(product)의 상세정보를 보내준다.
@@ -95,14 +96,16 @@ class DetailView(View):
     2. 요청받은 product_id에 해당하는 상제 정보를 DB에서 찾는다.
     3. 찾은 데이터를 반환한다.
     '''
+
     def get(self, request):
         try:
             data = json.loads(request.body)
             '''
-            result = []
+            result = [
+                {},
+                ... ]
             '''
-        
-           
+
         except KeyError:
             return JsonResponse({'message': 'KEY_ERROR'}, status=400)
         except json.JSONDecodeError:
