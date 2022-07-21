@@ -3,7 +3,7 @@ import json
 from django.http import JsonResponse
 from django.views import View
 
-from .models import Category, Furniture, SubCategory, Product
+from .models import Category, Furniture, ProductImage, SubCategory, Product, Brand, Color 
 
 
 class ListView(View):
@@ -103,17 +103,22 @@ class DetailView(View):
 
             product_id = data['product_id']
             product = Product.objects.get(id=product_id)
+            
+            detail_images = ProductImage.objects.filter(product_id = product_id)
+            detail_image_list = []
+            for detail_image in detail_images:
+                detail_image_list.append(detail_image.image_url)
 
             description = [
                 {
-                    "english_name": product.furniture.engilsh_name + '_' + product.color.english_name,
+                    "english_name": product.furniture.english_name + '_' + product.color.english_name,
                     'name': product.furniture.korean_name + '_' + product.color.korean_name,
                     'main_image': product.main_image_url,
-                    'detail_image': product.detail_image.image_url,
+                    # 'detail_image': product.detail_image.image_url
+                    'detail_image': detail_image_list
                 }]
 
-            related_products = Product.objects.filter(
-                Furniture_id=product.furniture_id)
+            related_products = Product.objects.filter(furniture_id=product.furniture_id)
 
             related_product_list = []
             for related_product in related_products:
