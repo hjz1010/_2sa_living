@@ -97,11 +97,11 @@ class DetailView(View):
     3. 찾은 데이터를 반환한다.
     '''
 
-    def get(self, request):
+    def get(self, request, product_id):
         try:
-            data = json.loads(request.body)
+            # data = json.loads(request.body)
 
-            product_id = data['product_id']
+            # product_id = data['product_id']
             product = Product.objects.get(id=product_id)
             
             detail_images = ProductImage.objects.filter(product_id = product_id)
@@ -153,7 +153,9 @@ class DetailView(View):
             ]
             '''
 
-        except KeyError:
-            return JsonResponse({'message': 'KEY_ERROR'}, status=400)
+        # except KeyError:
+        #     return JsonResponse({'message': 'KEY_ERROR'}, status=400)
+        except Product.DoesNotExist:
+            return JsonResponse({'message': 'INVALID_PRODUCT_ID'}, status=400)
         except json.JSONDecodeError:
             return JsonResponse({'message': 'JSON_ERROR'}, status=400)
