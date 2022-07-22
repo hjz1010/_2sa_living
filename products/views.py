@@ -1,4 +1,5 @@
 import json
+from unicodedata import category
 
 from django.http import JsonResponse
 from django.views import View
@@ -30,15 +31,6 @@ class ListView(View):
         try:
             data = json.loads(request.body)
             selected_category = data['category']
-            '''
-            product_list = [{
-                'id'         : 5,
-                'image'      : 'https://www.abcd',
-                'brandName'  : 'HAY',
-                'productName': '팔리사이드 쉐이즈 롱_올리브',
-                'price'      : 100000
-            }]
-            '''
 
             main_categories = Category.objects.all()
             # QuerySet: [ <'id':1, 'name':'소파'>,
@@ -49,6 +41,7 @@ class ListView(View):
             #             <'id':2, 'name':'바 체어'>,
             #             <'id':3, 'name':'키즈 체어'>,
             #             ... ]
+
             if selected_category in [category.name for category in main_categories]:
                 subs = SubCategory.objects.filter(
                     category__name=selected_category)
@@ -81,12 +74,92 @@ class ListView(View):
                         'price': product.price
                     })
                 return JsonResponse({'message': 'SUCCESS', 'product_list': product_list}, status=200)
+                '''
+                product_list = [{
+                    'id'         : 5,
+                    'image'      : 'https://www.abcd',
+                    'brandName'  : 'HAY',
+                    'productName': '팔리사이드 쉐이즈 롱_올리브',
+                    'price'      : 100000
+                }]
+                '''
             else:
                 return JsonResponse({'message': 'INVALID_CATEGORY'}, status=400)
         except KeyError:
             return JsonResponse({'message': 'KEY_ERROR'}, status=400)
         except json.JSONDecodeError:
             return JsonResponse({'message': 'JSON_ERROR'}, status=400)
+
+
+
+
+class CategoryView(View):
+
+    def get(self, request, category_id):
+        try:            
+            category = Category.objects.get(id = category_id)
+            products = Product.objects.filter(sub_category__category__id = category_id)
+            product_list = []
+            for product in products:
+                product_list.append({
+                        'id': product.id,
+                        'image': product.thumbnail_image_url,
+                        'brandName': product.furniture.brand.name,
+                        'productName': product.furniture.korean_name + '_' + product.color.korean_name,
+                        'price': product.price
+                    }                    
+                )
+            return JsonResponse({'message': 'SUCCESS', 'product_list': product_list}, status=200)
+            '''
+            product_list = [{
+                'id'         : 5,
+                'image'      : 'https://www.abcd',
+                'brandName'  : 'HAY',
+                'productName': '팔리사이드 쉐이즈 롱_올리브',
+                'price'      : 100000
+            }]
+            '''
+        except Category.DoesNotExist:
+            return JsonResponse({'message': 'INVALID_CATEGORY'}, status=400)
+        
+        except json.JSONDecodeError:
+            return JsonResponse({'message': 'JSON_ERROR'}, status=400)
+
+
+class SubCategoryView(View):
+
+    def get(self, request, sub_category_id):
+        try:            
+            sub_category = SubCategory.objects.get(id = sub_category_id)
+            products = Product.objects.filter(sub_category = sub_category)
+            product_list = []
+            for product in products:
+                product_list.append({
+                        'id': product.id,
+                        'image': product.thumbnail_image_url,
+                        'brandName': product.furniture.brand.name,
+                        'productName': product.furniture.korean_name + '_' + product.color.korean_name,
+                        'price': product.price
+                    }                   
+                )
+            return JsonResponse({'message': 'SUCCESS', 'product_list': product_list}, status=200)
+            '''
+            product_list = [{
+                'id'         : 5,
+                'image'      : 'https://www.abcd',
+                'brandName'  : 'HAY',
+                'productName': '팔리사이드 쉐이즈 롱_올리브',
+                'price'      : 100000
+            }]
+            '''
+        except SubCategory.DoesNotExist:
+            return JsonResponse({'message': 'INVALID_SUB_CATEGORY'}, status=400)
+        
+        except json.JSONDecodeError:
+            return JsonResponse({'message': 'JSON_ERROR'}, status=400)
+
+
+
 
 
 class DetailView(View):
@@ -123,7 +196,7 @@ class DetailView(View):
             related_product_list = []
             for related_product in related_products:
                 related_product_list.append({
-                    'color': related_product.color.korean_name,
+                    'color': related_product.color.engilsh_name,
                     'price': related_product.price
                 })
 
