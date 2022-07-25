@@ -1,4 +1,4 @@
-import json
+# import json
 
 from django.http           import JsonResponse
 from django.views          import View
@@ -221,7 +221,7 @@ class ProductDetailView(View):
             #         # 'detail_image': detail_image_list,
             #         'related_color_price': [related_product.color.english_name+'_'+str(int(related_product.price))+'원' for related_product in related_products]
             #     }]
-            description = [{
+            result = [{
                     'english_name'         : product.furniture.english_name + '_' + product.color.english_name,
                     'korean_name'          : product.furniture.korean_name + '_' + product.color.korean_name,
                     'main_image'           : product.main_image_url,
@@ -242,7 +242,7 @@ class ProductDetailView(View):
             #         'price': related_product.price
             #     })
 
-            return JsonResponse({'description': description}, status=200)
+            return JsonResponse({'result': result}, status=200)
 
             '''
             'description' : [
