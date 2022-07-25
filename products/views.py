@@ -3,6 +3,7 @@ import json
 from django.http           import JsonResponse
 from django.views          import View
 from django.core.paginator import Paginator
+from django.db.models      import Q
 
 from .models import *
 
@@ -159,34 +160,37 @@ from .models import *
 #             return JsonResponse({'message': 'JSON_ERROR'}, status=400)
 
 
-class ListView(View):
+class ProductListView(View):
     def get(self, request):
         category_id     = request.GET.get('category_id', None)
         sub_category_id = request.GET.get('sub_category_id', None)
         page_number     = request.GET.get('page', None)
 
         if int(category_id) in [c.id for c in Category.objects.all()] and int(sub_category_id) in [c.id for c in SubCategory.objects.all()]:
-            products = Product.objects.filter(sub_category_id = sub_category_id) or Product.objects.filter(sub_category__category_id = category_id) 
-            product_list = [{
-                'id'         : product.id,
-                'image'      : product.thumbnail_image_url,
-                'brandName'  : product.furniture.brand.name,
-                'productName': product.furniture.korean_name + '_' + product.color.korean_name,
-                'price'      : product.price
-            } for product in products]    
+            if SubCategory.objects.get(id=sub_category_id).category == Category.objects.get(id=category_id):
+                products = Product.objects.filter(Q(sub_category_id = sub_category_id) & Q(sub_category__category_id = category_id)) 
+                product_list = [{
+                    'id'         : product.id,
+                    'image'      : product.thumbnail_image_url,
+                    'brandName'  : product.furniture.brand.name,
+                    'productName': product.furniture.korean_name + '_' + product.color.korean_name,
+                    'price'      : product.price
+                } for product in products]    
 
-            try: 
-                paginator    = Paginator(product_list, 4)
-                product_list = paginator.page(page_number).object_list
-                page_list    = list(paginator.page_range)
-                return JsonResponse({'message': 'SUCCESS', 'product_list': product_list, 'page_list': page_list}, status=200)
-            except :
-                return JsonResponse({'message': 'INVALID_PAGE'}, status=400)
+                try: 
+                    paginator    = Paginator(product_list, 4)
+                    product_list = paginator.page(page_number).object_list
+                    page_list    = list(paginator.page_range)
+                    return JsonResponse({'message': 'SUCCESS', 'product_list': product_list, 'page_list': page_list}, status=200)
+                except :
+                    return JsonResponse({'message': 'INVALID_PAGE'}, status=404)
+            else:
+                return JsonResponse({'message': 'DO_NOT_MATCH_CATEGORY'}, status=400)
         else:
-            return JsonResponse({'message': 'INVALID_CATEGORY'}, status=400)
+            return JsonResponse({'message': 'INVALID_CATEGORY'}, status=404)
 
 
-class DetailView(View):
+class ProductDetailView(View):
     '''
     목적: 사용자가 선택한 제품(product)의 상세정보를 보내준다.
     1. client가 보내온 데이터에서 제품아이디를 받아온다.
@@ -207,15 +211,26 @@ class DetailView(View):
             # for detail_image in detail_images:
             #     detail_image_list.append(detail_image.image_url)
 
-            description = [
-                {
-                    "english_name": product.furniture.english_name + '_' + product.color.english_name,
-                    'name': product.furniture.korean_name + '_' + product.color.korean_name,
-                    'main_image': product.main_image_url,
-                    # 'detail_image': product.detail_image.all() # 쿼리셋으로 받아오고 for문 돌려서 각 이미지 받아오는 방식으로 해야한다
-                    'detail_image': [image.image_url for image in product.detail_image.all()],
-                    # 'detail_image': detail_image_list,
-                    'related_color_price': [r_p.color.english_name+'_'+str(int(r_p.price))+'원' for r_p in related_products]
+            # description = [
+            #     {
+            #         "english_name": product.furniture.english_name + '_' + product.color.english_name,
+            #         'name': product.furniture.korean_name + '_' + product.color.korean_name,
+            #         'main_image': product.main_image_url,
+            #         # 'detail_image': product.detail_image.all() # 쿼리셋으로 받아오고 for문 돌려서 각 이미지 받아오는 방식으로 해야한다
+            #         'detail_image': [image.image_url for image in product.detail_image.all()],
+            #         # 'detail_image': detail_image_list,
+            #         'related_color_price': [related_product.color.english_name+'_'+str(int(related_product.price))+'원' for related_product in related_products]
+            #     }]
+            description = [{
+                    'english_name'         : product.furniture.english_name + '_' + product.color.english_name,
+                    'korean_name'          : product.furniture.korean_name + '_' + product.color.korean_name,
+                    'main_image'           : product.main_image_url,
+                    'detail_image'         : [image.image_url for image in product.detail_image.all()],
+                    'related_products_list': [{
+                        'id'   : related_product.id,
+                        'color': related_product.color.english_name,
+                        'price': related_product.price
+                    } for related_product in related_products]
                 }]
 
             # related_products = Product.objects.filter(furniture_id=product.furniture_id)
@@ -257,5 +272,5 @@ class DetailView(View):
         #     return JsonResponse({'message': 'KEY_ERROR'}, status=400)
         except Product.DoesNotExist:
             return JsonResponse({'message': 'INVALID_PRODUCT_ID'}, status=400)
-        except json.JSONDecodeError:
-            return JsonResponse({'message': 'JSON_ERROR'}, status=400)
+        # except json.JSONDecodeError:
+        #     return JsonResponse({'message': 'JSON_ERROR'}, status=400)
