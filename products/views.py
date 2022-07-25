@@ -162,6 +162,36 @@ from .models import *
 
 class ProductListView(View):
     def get(self, request):
+
+        category_id     = request.GET.get('category_id', None)
+        sub_category_id = request.GET.get('sub_category_id', None)
+        page_number     = request.GET.get('page', None)
+
+        q = Q()
+        if category_id:
+            q &= Q(sub_category__category_id=category_id)
+        if sub_category_id:
+            q &= Q(sub_category_id = sub_category_id) 
+
+        products = Product.objects.filter(q) 
+        
+        product_list = [{
+            'id'         : product.id,
+            'image'      : product.thumbnail_image_url,
+            'brandName'  : product.furniture.brand.name,  
+            'productName': product.furniture.korean_name + '_' + product.color.korean_name,
+            'price'      : product.price
+        } for product in products]    
+        
+        paginator    = Paginator(product_list, 4)
+        product_list = paginator.page(page_number).object_list
+        page_list    = list(paginator.page_range)
+
+        return JsonResponse({'message': 'SUCCESS', 'product_list': product_list, 'page_list': page_list}, status=200)
+
+####### 하아... 예외처리 하고 싶은건 많은데 방법을 못 찾겠다... ↓ 엉망진창 #####
+
+    def get(self, request):
         category_id     = request.GET.get('category_id', None)
         sub_category_id = request.GET.get('sub_category_id', None)
         page_number     = request.GET.get('page', None)
@@ -221,7 +251,7 @@ class ProductDetailView(View):
             #         # 'detail_image': detail_image_list,
             #         'related_color_price': [related_product.color.english_name+'_'+str(int(related_product.price))+'원' for related_product in related_products]
             #     }]
-            result = [{
+            result = {
                     'english_name'         : product.furniture.english_name + '_' + product.color.english_name,
                     'korean_name'          : product.furniture.korean_name + '_' + product.color.korean_name,
                     'main_image'           : product.main_image_url,
@@ -231,7 +261,7 @@ class ProductDetailView(View):
                         'color': related_product.color.english_name,
                         'price': related_product.price
                     } for related_product in related_products]
-                }]
+                }
 
             # related_products = Product.objects.filter(furniture_id=product.furniture_id)
 
