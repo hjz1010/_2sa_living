@@ -5,7 +5,8 @@ from django.views          import View
 from django.core.paginator import Paginator
 from django.db.models      import Q
 
-from .models import *
+from products.models import *
+from orders.models   import *
 
 
 # class ListView_draft(View):
@@ -162,62 +163,111 @@ from .models import *
 
 class ProductListView(View):
     def get(self, request):
+        '''
+        필요한 예외처리
+      (x)  1. DB에 없는 value이 들어온 경우 404 + 첫 페이지???
+      (x)  2. 올바르지 않은 parameter가 들어온 경우 400 + 첫 페이지이이이???? >> 400이 아니구 셋 다 없는 경우로 취급되겠구만
+      ()  3. category_id와 sub_category_id가 맞지 않는 경우 400 + sub_category에 맞는 페이지?
+        '''
+        try:
+            DEFAULT_LIMIT = 4
+            DEFAULT_OFFSET = 0
 
-        category_id     = request.GET.get('category_id', None)
-        sub_category_id = request.GET.get('sub_category_id', None)
-        page_number     = request.GET.get('page', None)
+            category_id     = request.GET.get('category_id', None)
+            sub_category_id = request.GET.get('sub_category_id', None)
+            # page_number       = request.GET.get('page', 1)
+            # pagesize          = request.GET.get('pagesize', 8)
+            limit           = int(request.GET.get('limit', DEFAULT_LIMIT))
+            offset          = int(request.GET.get('offset', DEFAULT_OFFSET))
+            sort_type       = int(request.GET.get('sort_type', 1))   # id순(1 = default), 신상품순(2), 높은가격순(3), 낮은가격순(4), 판매순(5)
+           
+            # if category_id:
+            #     Category.objectes.get(id = category_id)
+            # if sub_category_id:
+            #     SubCategory.objects.get(id = sub_category_id)
+            
+            sub_category_q = Q()
 
-        q = Q()
-        if category_id:
-            q &= Q(sub_category__category_id=category_id)
-        if sub_category_id:
-            q &= Q(sub_category_id = sub_category_id) 
+            product_q = Q()
 
-        products = Product.objects.filter(q) 
-        
-        product_list = [{
-            'id'         : product.id,
-            'image'      : product.thumbnail_image_url,
-            'brandName'  : product.furniture.brand.name,  
-            'productName': product.furniture.korean_name + '_' + product.color.korean_name,
-            'price'      : product.price
-        } for product in products]    
-        
-        paginator    = Paginator(product_list, 4)
-        product_list = paginator.page(page_number).object_list
-        page_list    = list(paginator.page_range)
+            if category_id:
+                category        = Category.objects.get(id = category_id)
+                sub_category_q &= Q(category=category)
+                product_q      &= Q(sub_category__category = category)
 
-        return JsonResponse({'message': 'SUCCESS', 'product_list': product_list, 'page_list': page_list}, status=200)
+            if sub_category_id:
+                sub_category    = SubCategory.objects.get(id = sub_category_id)
+                sub_category_q &= Q(category=sub_category.category)
+                product_q      &= Q(sub_category = sub_category)
 
-####### 하아... 예외처리 하고 싶은건 많은데 방법을 못 찾겠다... ↓ 엉망진창 #####
+            sub_category_list = [ sub_category.name for sub_category in SubCategory.objects.filter(sub_category_q) ]
 
-    def get(self, request):
-        category_id     = request.GET.get('category_id', None)
-        sub_category_id = request.GET.get('sub_category_id', None)
-        page_number     = request.GET.get('page', None)
+            # id순(1 = default), 신상품순(2), 높은가격순(3), 낮은가격순(4), 판매순(5)
+            # Product.annotate(updated_at=Product.furniture.updated_at)
+            # Product.annotate(total_quantity=OrderItme.)
+            sort_set = { 
+                1: 'id',
+                2: 'furniture__updated_at',
+                3: '-price',
+                4: 'price',
+                5: 'total_quantity',
+            }
 
-        if int(category_id) in [c.id for c in Category.objects.all()] and int(sub_category_id) in [c.id for c in SubCategory.objects.all()]:
-            if SubCategory.objects.get(id=sub_category_id).category == Category.objects.get(id=category_id):
-                products = Product.objects.filter(Q(sub_category_id = sub_category_id) & Q(sub_category__category_id = category_id)) 
-                product_list = [{
-                    'id'         : product.id,
-                    'image'      : product.thumbnail_image_url,
-                    'brandName'  : product.furniture.brand.name,
-                    'productName': product.furniture.korean_name + '_' + product.color.korean_name,
-                    'price'      : product.price
-                } for product in products]    
+            total_quantities = OrderItem.objects.values('product__id','quantity')
+            total_quantities = total_quantities.values('product__id').annotate(total_quantity=sum('quantity'))
+            total_quantities.aggregate(total_quantity=sum('quantity'))
+            
 
-                try: 
-                    paginator    = Paginator(product_list, 4)
-                    product_list = paginator.page(page_number).object_list
-                    page_list    = list(paginator.page_range)
-                    return JsonResponse({'message': 'SUCCESS', 'product_list': product_list, 'page_list': page_list}, status=200)
-                except :
-                    return JsonResponse({'message': 'INVALID_PAGE'}, status=404)
-            else:
-                return JsonResponse({'message': 'DO_NOT_MATCH_CATEGORY'}, status=400)
-        else:
+            sort_field = sort_set.get(sort_type, 'id')
+            products = Product.objects.filter(product_q).order_by(sort_field)[offset:offset+limit]
+            
+            product_list = [{
+                'id'         : product.id,
+                'image'      : product.thumbnail_image_url,
+                'brandName'  : product.furniture.brand.name,  
+                'productName': product.furniture.korean_name + '_' + product.color.korean_name,
+                'price'      : product.price
+            } for product in products]    
+            
+            # paginator    = Paginator(product_list, pagesize)
+            # product_list = paginator.page(page_number).object_list
+            # page_list    = list(paginator.page_range)
+
+            return JsonResponse({'message': 'SUCCESS', 'sub_category_list': sub_category_list, 'product_list': product_list}, status=200)
+        except Category.DoesNotExist:
             return JsonResponse({'message': 'INVALID_CATEGORY'}, status=404)
+        except SubCategory.DoesNotExist:   
+            return JsonResponse({'message': 'INVALID_SUBCATEGORY'}, status=404)        
+        # except Paginator.EmptyPage:
+        #     return JsonResponse({'message': 'INVALID_PAGE'}, status=404)    
+
+    # def get(self, request):
+    #     category_id     = request.GET.get('category_id', None)
+    #     sub_category_id = request.GET.get('sub_category_id', None)
+    #     page_number     = request.GET.get('page', None)
+
+    #     if int(category_id) in [c.id for c in Category.objects.all()] and int(sub_category_id) in [c.id for c in SubCategory.objects.all()]:
+    #         if SubCategory.objects.get(id=sub_category_id).category == Category.objects.get(id=category_id):
+    #             products = Product.objects.filter(Q(sub_category_id = sub_category_id) & Q(sub_category__category_id = category_id)) 
+    #             product_list = [{
+    #                 'id'         : product.id,
+    #                 'image'      : product.thumbnail_image_url,
+    #                 'brandName'  : product.furniture.brand.name,
+    #                 'productName': product.furniture.korean_name + '_' + product.color.korean_name,
+    #                 'price'      : product.price
+    #             } for product in products]    
+
+    #             try: 
+    #                 paginator    = Paginator(product_list, 4)
+    #                 product_list = paginator.page(page_number).object_list
+    #                 page_list    = list(paginator.page_range)
+    #                 return JsonResponse({'message': 'SUCCESS', 'product_list': product_list, 'page_list': page_list}, status=200)
+    #             except :
+    #                 return JsonResponse({'message': 'INVALID_PAGE'}, status=404)
+    #         else:
+    #             return JsonResponse({'message': 'DO_NOT_MATCH_CATEGORY'}, status=400)
+    #     else:
+    #         return JsonResponse({'message': 'INVALID_CATEGORY'}, status=404)
 
 
 class ProductDetailView(View):
@@ -256,6 +306,8 @@ class ProductDetailView(View):
                     'korean_name'          : product.furniture.korean_name + '_' + product.color.korean_name,
                     'main_image'           : product.main_image_url,
                     'detail_image'         : [image.image_url for image in product.detail_image.all()],
+                    'price'                : product.price,
+                    'brand'                : product.furniture.brand.name,
                     'related_products_list': [{
                         'id'   : related_product.id,
                         'color': related_product.color.english_name,
