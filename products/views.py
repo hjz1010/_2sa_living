@@ -4,6 +4,7 @@ from django.http           import JsonResponse
 from django.views          import View
 from django.core.paginator import Paginator
 from django.db.models      import Q
+from django.db.models import F, Sum, Count, Case, When
 
 from products.models import *
 from orders.models   import *
@@ -160,86 +161,89 @@ from orders.models   import *
 #         except json.JSONDecodeError:
 #             return JsonResponse({'message': 'JSON_ERROR'}, status=400)
 
+######## 판매량순으로 order_by 실패... ↓포기한다#########
+# class ProductListView(View):
+#     def get(self, request):
+#         '''
+#         필요한 예외처리
+#       (x)  1. DB에 없는 value이 들어온 경우 404 + 첫 페이지???
+#       (x)  2. 올바르지 않은 parameter가 들어온 경우 400 + 첫 페이지이이이???? >> 400이 아니구 셋 다 없는 경우로 취급되겠구만
+#       ()  3. category_id와 sub_category_id가 맞지 않는 경우 400 + sub_category에 맞는 페이지?
+#         '''
+#         try:
+#             DEFAULT_LIMIT = 4
+#             DEFAULT_OFFSET = 0
 
-class ProductListView(View):
-    def get(self, request):
-        '''
-        필요한 예외처리
-      (x)  1. DB에 없는 value이 들어온 경우 404 + 첫 페이지???
-      (x)  2. 올바르지 않은 parameter가 들어온 경우 400 + 첫 페이지이이이???? >> 400이 아니구 셋 다 없는 경우로 취급되겠구만
-      ()  3. category_id와 sub_category_id가 맞지 않는 경우 400 + sub_category에 맞는 페이지?
-        '''
-        try:
-            DEFAULT_LIMIT = 4
-            DEFAULT_OFFSET = 0
-
-            category_id     = request.GET.get('category_id', None)
-            sub_category_id = request.GET.get('sub_category_id', None)
-            # page_number       = request.GET.get('page', 1)
-            # pagesize          = request.GET.get('pagesize', 8)
-            limit           = int(request.GET.get('limit', DEFAULT_LIMIT))
-            offset          = int(request.GET.get('offset', DEFAULT_OFFSET))
-            sort_type       = int(request.GET.get('sort_type', 1))   # id순(1 = default), 신상품순(2), 높은가격순(3), 낮은가격순(4), 판매순(5)
+#             category_id     = request.GET.get('category_id', None)
+#             sub_category_id = request.GET.get('sub_category_id', None)
+#             # page_number       = request.GET.get('page', 1)
+#             # pagesize          = request.GET.get('pagesize', 8)
+#             limit           = int(request.GET.get('limit', DEFAULT_LIMIT))
+#             offset          = int(request.GET.get('offset', DEFAULT_OFFSET))
+#             sort_type       = int(request.GET.get('sort_type', 1))   # id순(1 = default), 신상품순(2), 높은가격순(3), 낮은가격순(4), 판매순(5)
            
-            # if category_id:
-            #     Category.objectes.get(id = category_id)
-            # if sub_category_id:
-            #     SubCategory.objects.get(id = sub_category_id)
+#             # if category_id:
+#             #     Category.objectes.get(id = category_id)
+#             # if sub_category_id:
+#             #     SubCategory.objects.get(id = sub_category_id)
             
-            sub_category_q = Q()
+#             sub_category_q = Q()
 
-            product_q = Q()
+#             product_q = Q()
 
-            if category_id:
-                category        = Category.objects.get(id = category_id)
-                sub_category_q &= Q(category=category)
-                product_q      &= Q(sub_category__category = category)
+#             if category_id:
+#                 category        = Category.objects.get(id = category_id)
+#                 sub_category_q &= Q(category=category)
+#                 product_q      &= Q(sub_category__category = category)
 
-            if sub_category_id:
-                sub_category    = SubCategory.objects.get(id = sub_category_id)
-                sub_category_q &= Q(category=sub_category.category)
-                product_q      &= Q(sub_category = sub_category)
+#             if sub_category_id:
+#                 sub_category    = SubCategory.objects.get(id = sub_category_id)
+#                 sub_category_q &= Q(category=sub_category.category)
+#                 product_q      &= Q(sub_category = sub_category)
 
-            sub_category_list = [ sub_category.name for sub_category in SubCategory.objects.filter(sub_category_q) ]
-
-            # id순(1 = default), 신상품순(2), 높은가격순(3), 낮은가격순(4), 판매순(5)
-            # Product.annotate(updated_at=Product.furniture.updated_at)
-            # Product.annotate(total_quantity=OrderItme.)
-            sort_set = { 
-                1: 'id',
-                2: 'furniture__updated_at',
-                3: '-price',
-                4: 'price',
-                5: 'total_quantity',
-            }
-
-            total_quantities = OrderItem.objects.values('product__id','quantity')
-            total_quantities = total_quantities.values('product__id').annotate(total_quantity=sum('quantity'))
-            total_quantities.aggregate(total_quantity=sum('quantity'))
+#             count = len(Product.objects.filter(product_q))
             
+#             if offset > count: 
+#                 return JsonResponse({'message': 'INVALID_OFFSET'}, status=404)
 
-            sort_field = sort_set.get(sort_type, 'id')
-            products = Product.objects.filter(product_q).order_by(sort_field)[offset:offset+limit]
-            
-            product_list = [{
-                'id'         : product.id,
-                'image'      : product.thumbnail_image_url,
-                'brandName'  : product.furniture.brand.name,  
-                'productName': product.furniture.korean_name + '_' + product.color.korean_name,
-                'price'      : product.price
-            } for product in products]    
-            
-            # paginator    = Paginator(product_list, pagesize)
-            # product_list = paginator.page(page_number).object_list
-            # page_list    = list(paginator.page_range)
+#             sub_category_list = [ sub_category.name for sub_category in SubCategory.objects.filter(sub_category_q) ]
 
-            return JsonResponse({'message': 'SUCCESS', 'sub_category_list': sub_category_list, 'product_list': product_list}, status=200)
-        except Category.DoesNotExist:
-            return JsonResponse({'message': 'INVALID_CATEGORY'}, status=404)
-        except SubCategory.DoesNotExist:   
-            return JsonResponse({'message': 'INVALID_SUBCATEGORY'}, status=404)        
-        # except Paginator.EmptyPage:
-        #     return JsonResponse({'message': 'INVALID_PAGE'}, status=404)    
+#             # id순(1 = default), 신상품순(2), 높은가격순(3), 낮은가격순(4), 판매순(5)
+#             # Product.annotate(updated_at=Product.furniture.updated_at)
+#             # Product.annotate(total_quantity=OrderItme.)
+#             sort_set = { 
+#                 1: 'id',
+#                 2: 'furniture__updated_at',
+#                 3: '-price',
+#                 4: 'price',
+#                 5: 'total_quantity',
+#             }
+
+#             TotalPrice = OrderItem.objects.values('product').annotate(total_price=Sum('product__price'))
+#             Product2 = OrderItem.objects.values('product__id','product__thumbnail_image_url','product__furniture','product__price','product__color','product__sub_category').annotate(total_quantity=Sum('quantity'))
+
+#             sort_field = sort_set.get(sort_type, 'id')
+#             products = Product2.filter(product_q).order_by(sort_field)[offset:offset+limit]
+            
+#             product_list = [{
+#                 'id'         : product.product__id,
+#                 'image'      : product.product__thumbnail_image_url,
+#                 'brandName'  : product.product__furniture.brand.name,  
+#                 'productName': product.product__furniture.korean_name + '_' + product.product__color.korean_name,
+#                 'price'      : product.product__price
+#             } for product in products]    
+            
+#             # paginator    = Paginator(product_list, pagesize)
+#             # product_list = paginator.page(page_number).object_list
+#             # page_list    = list(paginator.page_range)
+
+#             return JsonResponse({'message': 'SUCCESS', 'count': count, 'sub_category_list': sub_category_list, 'product_list': product_list}, status=200)
+#         except Category.DoesNotExist:
+#             return JsonResponse({'message': 'INVALID_CATEGORY'}, status=404)
+#         except SubCategory.DoesNotExist:   
+#             return JsonResponse({'message': 'INVALID_SUBCATEGORY'}, status=404)        
+#         # except Paginator.EmptyPage:
+#         #     return JsonResponse({'message': 'INVALID_PAGE'}, status=404)    
 
     # def get(self, request):
     #     category_id     = request.GET.get('category_id', None)
@@ -269,7 +273,65 @@ class ProductListView(View):
     #     else:
     #         return JsonResponse({'message': 'INVALID_CATEGORY'}, status=404)
 
+class ProductListView(View):
+    def get(self, request):
+        try:
+            DEFAULT_LIMIT = 4
+            DEFAULT_OFFSET = 0
 
+            category_id     = request.GET.get('category_id', None)
+            sub_category_id = request.GET.get('sub_category_id', None)
+            limit           = int(request.GET.get('limit', DEFAULT_LIMIT))
+            offset          = int(request.GET.get('offset', DEFAULT_OFFSET))
+            sort_type       = int(request.GET.get('sort_type', 1))  
+            
+            sub_category_q = Q()
+
+            product_q = Q()
+
+            if category_id:
+                category        = Category.objects.get(id = category_id)
+                sub_category_q &= Q(category=category)
+                product_q      &= Q(sub_category__category = category)
+
+            if sub_category_id:
+                sub_category    = SubCategory.objects.get(id = sub_category_id)
+                sub_category_q &= Q(category=sub_category.category)
+                product_q      &= Q(sub_category = sub_category)
+            
+            count = len(Product.objects.filter(product_q))
+
+            #### count 값 줬으니까 예외처리는 하지말고 그냥 빈 리스트 반환할까... ###
+            # if offset > count: 
+            #     return JsonResponse({'message': 'INVALID_OFFSET'}, status=404)
+
+            sub_category_list = [ sub_category.name for sub_category in SubCategory.objects.filter(sub_category_q) ]
+
+            sort_set = { 
+                1: 'id',
+                2: 'furniture__updated_at',
+                3: '-price',
+                4: 'price',
+            }
+
+            sort_field = sort_set.get(sort_type, 'id')            
+            products   = Product.objects.filter(product_q).order_by(sort_field)[offset:offset+limit]
+            
+            product_list = [{
+                'id'         : product.id,
+                'image'      : product.thumbnail_image_url,
+                'brandName'  : product.furniture.brand.name,  
+                'productName': product.furniture.korean_name + '_' + product.color.korean_name,
+                'price'      : product.price
+            } for product in products]                
+
+            return JsonResponse({'message': 'SUCCESS', 'count': count, 'sub_category_list': sub_category_list, 'product_list': product_list}, status=200)
+        except Category.DoesNotExist:
+            return JsonResponse({'message': 'INVALID_CATEGORY'}, status=404)
+        except SubCategory.DoesNotExist:   
+            return JsonResponse({'message': 'INVALID_SUBCATEGORY'}, status=404)    
+
+            
 class ProductDetailView(View):
     '''
     목적: 사용자가 선택한 제품(product)의 상세정보를 보내준다.
