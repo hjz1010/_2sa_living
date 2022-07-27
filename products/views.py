@@ -1,4 +1,5 @@
 import json
+from unicodedata import category
 
 from django.http           import JsonResponse
 from django.views          import View
@@ -412,31 +413,43 @@ class ProductDetailView(View):
         #     return JsonResponse({'message': 'JSON_ERROR'}, status=400)
 
 class SubCategoryView(View):
+    # def get(self, request):
+    #     try:
+    #         category_id     = request.GET.get('category_id', None)
+    #         sub_category_id = request.GET.get('sub_category_id', None)
+            
+    #         sub_category_q = Q()
+
+    #         if category_id:
+    #             category        = Category.objects.get(id = category_id)
+    #             sub_category_q &= Q(category=category)
+
+    #         if sub_category_id:
+    #             sub_category    = SubCategory.objects.get(id = sub_category_id)
+    #             sub_category_q &= Q(category=sub_category.category)
+            
+    #         sub_category_list = [ [sub_category.id, sub_category.name] for sub_category in SubCategory.objects.filter(sub_category_q) ]
+
+    #         return JsonResponse({'message': 'SUCCESS', 'sub_category_list': sub_category_list}, status=200)
+    #     except Category.DoesNotExist:
+    #         return JsonResponse({'message': 'INVALID_CATEGORY'}, status=404)
+    #     except SubCategory.DoesNotExist:   
+    #         return JsonResponse({'message': 'INVALID_SUBCATEGORY'}, status=404)    
+    #### 한번 요청할 때 대분류 전체랑 소분류 전체를 반환해주면 프론트에서 저장해두고 사용하는 방식이 일반적이다. 고쳐보자 ↓
+
     def get(self, request):
-        try:
-            category_id     = request.GET.get('category_id', None)
-            sub_category_id = request.GET.get('sub_category_id', None)
-            
-            sub_category_q = Q()
+        category_list     = [{
+            'id': category.id, 
+            'name': category.name
+            } for category in Category.objects.all()]
 
-            if category_id:
-                category        = Category.objects.get(id = category_id)
-                sub_category_q &= Q(category=category)
+        sub_category_list = [{
+            'id': subcategory.id, 
+            'name': subcategory.name, 
+            'category': subcategory.category.id
+            } for subcategory in SubCategory.objects.all()]
 
-            if sub_category_id:
-                sub_category    = SubCategory.objects.get(id = sub_category_id)
-                sub_category_q &= Q(category=sub_category.category)
-            
-            sub_category_list = [ [sub_category.id, sub_category.name] for sub_category in SubCategory.objects.filter(sub_category_q) ]
-
-            return JsonResponse({'message': 'SUCCESS', 'sub_category_list': sub_category_list}, status=200)
-        except Category.DoesNotExist:
-            return JsonResponse({'message': 'INVALID_CATEGORY'}, status=404)
-        except SubCategory.DoesNotExist:   
-            return JsonResponse({'message': 'INVALID_SUBCATEGORY'}, status=404)    
-
-
-
+        return JsonResponse({'message': 'SUCCESS', 'category_list': category_list,'sub_category_list': sub_category_list}, status=200)
 
 
 class ReviewView(View):

@@ -62,7 +62,7 @@ with open('products.txt', 'r') as file:
                 furniture           = Furniture.objects.get(korean_name=row[4])
             )  
 
-        if not ProductImage.objects.filter(image_url=row[11]):
+        if not ProductImage.objects.filter(product_id=row[0]):
             ProductImage.objects.create( 
                 image_url = row[11],
                 product   = Product.objects.get(furniture__korean_name=row[4], color__korean_name=row[6])
