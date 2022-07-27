@@ -1,4 +1,4 @@
-# import json
+import json
 
 from django.http           import JsonResponse
 from django.views          import View
@@ -8,6 +8,7 @@ from django.db.models import F, Sum, Count, Case, When
 
 from products.models import *
 from orders.models   import *
+from core.utils      import *
 
 
 # class ListView_draft(View):
@@ -418,3 +419,36 @@ class ProductDetailView(View):
             return JsonResponse({'message': 'INVALID_PRODUCT_ID'}, status=400)
         # except json.JSONDecodeError:
         #     return JsonResponse({'message': 'JSON_ERROR'}, status=400)
+
+
+
+
+class ReviewView(View):
+    
+    def get(self, request, product_id):
+    
+        result = [{
+            'review_id' : review.id,
+            'user_first_name' : review.user.first_name,
+            'user_last_name' : review.user.last_name,
+            'content'   : review.content,
+            'created_at': review.created_at,
+            'updated_at': review.updated_at
+        } for review in Review.objects.filter(product_id=product_id)]
+    
+        return JsonResponse({'result':result}, status=200)
+
+    @login_confirm
+    def post(self, request, product_id):
+        try:
+            data    = json.loads(request.body)
+
+            Review.objects.create(
+                user    = request.user,
+                product = Product.objects.get(id=product_id),
+                content = data["content"])
+
+            return JsonResponse({"MESSAGE":"SUCCESS"}, status=201)
+        
+        except Product.DoesNotExist:
+            return JsonResponse({"MESSAGE":"PRODUCT_DOES_NOT_EXIST"}, status=400)
