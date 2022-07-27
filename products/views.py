@@ -284,39 +284,30 @@ class ProductListView(View):
             sub_category_id = request.GET.get('sub_category_id', None)
             limit           = int(request.GET.get('limit', DEFAULT_LIMIT))
             offset          = int(request.GET.get('offset', DEFAULT_OFFSET))
-            sort_type       = int(request.GET.get('sort_type', 1))  
+            sort_type       = request.GET.get('sort_type', 'id')
             
-            sub_category_q = Q()
-
             product_q = Q()
 
             if category_id:
                 category        = Category.objects.get(id = category_id)
-                sub_category_q &= Q(category=category)
                 product_q      &= Q(sub_category__category = category)
 
             if sub_category_id:
                 sub_category    = SubCategory.objects.get(id = sub_category_id)
-                sub_category_q &= Q(category=sub_category.category)
                 product_q      &= Q(sub_category = sub_category)
             
-            count = len(Product.objects.filter(product_q))
-
-            #### count 값 줬으니까 예외처리는 하지말고 그냥 빈 리스트 반환할까... ###
-            # if offset > count: 
-            #     return JsonResponse({'message': 'INVALID_OFFSET'}, status=404)
-
-            sub_category_list = [ sub_category.name for sub_category in SubCategory.objects.filter(sub_category_q) ]
+            count = Product.objects.filter(product_q).count()   
 
             sort_set = { 
-                1: 'id',
-                2: 'furniture__updated_at',
-                3: '-price',
-                4: 'price',
+                'id': 'id',
+                'new': 'furniture__updated_at',
+                'high_price': '-price',
+                'low_price': 'price',
             }
 
-            sort_field = sort_set.get(sort_type, 'id')            
-            products   = Product.objects.filter(product_q).order_by(sort_field)[offset:offset+limit]
+            sort_field = sort_set.get(sort_type, 'id')       
+
+            products = Product.objects.filter(product_q).order_by(sort_field)[offset:offset+limit]
             
             product_list = [{
                 'id'         : product.id,
@@ -326,7 +317,7 @@ class ProductListView(View):
                 'price'      : product.price
             } for product in products]                
 
-            return JsonResponse({'message': 'SUCCESS', 'count': count, 'sub_category_list': sub_category_list, 'product_list': product_list}, status=200)
+            return JsonResponse({'message': 'SUCCESS', 'count': count, 'product_list': product_list}, status=200)
         except Category.DoesNotExist:
             return JsonResponse({'message': 'INVALID_CATEGORY'}, status=404)
         except SubCategory.DoesNotExist:   
@@ -419,6 +410,31 @@ class ProductDetailView(View):
             return JsonResponse({'message': 'INVALID_PRODUCT_ID'}, status=400)
         # except json.JSONDecodeError:
         #     return JsonResponse({'message': 'JSON_ERROR'}, status=400)
+
+class SubCategoryView(View):
+    def get(self, request):
+        try:
+            category_id     = request.GET.get('category_id', None)
+            sub_category_id = request.GET.get('sub_category_id', None)
+            
+            sub_category_q = Q()
+
+            if category_id:
+                category        = Category.objects.get(id = category_id)
+                sub_category_q &= Q(category=category)
+
+            if sub_category_id:
+                sub_category    = SubCategory.objects.get(id = sub_category_id)
+                sub_category_q &= Q(category=sub_category.category)
+            
+            sub_category_list = [ [sub_category.id, sub_category.name] for sub_category in SubCategory.objects.filter(sub_category_q) ]
+
+            return JsonResponse({'message': 'SUCCESS', 'sub_category_list': sub_category_list}, status=200)
+        except Category.DoesNotExist:
+            return JsonResponse({'message': 'INVALID_CATEGORY'}, status=404)
+        except SubCategory.DoesNotExist:   
+            return JsonResponse({'message': 'INVALID_SUBCATEGORY'}, status=404)    
+
 
 
 

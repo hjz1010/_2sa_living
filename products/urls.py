@@ -16,6 +16,7 @@ urlpatterns = [
     path('/<int:product_id>', ProductDetailView.as_view()),
     # 127.0.0.1:8000/products/7    
     # 127.0.0.1:8000/products?product_id=7   
+    path('/subcategory', SubCategoryView.as_view()),
     path('/review/<int:product_id>', ReviewView.as_view())
     
 ]
