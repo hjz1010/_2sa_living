@@ -13,17 +13,17 @@ class SignUpView(View):
         try:
             data = json.loads(request.body)
             
-            email	 = data['email']
-            password	 = data['password']
-            first_name	 = data['first_name']
-            last_name	 = data['last_name']
+            email        = data['email']
+            password     = data['password']
+            first_name   = data['first_name']
+            last_name    = data['last_name']
             phone_number = data['phone_number']
-            birthdate	 = data['birthdate']
+            birthdate    = data['birthdate']
             
-            REGEX_EMAIL	  	 = '^[a-zA-Z0-9+-_.]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
-            REGEX_PASSWORD	 = '^(?=.*[A-Za-z])(?=.*\d)(?=.*[$@$!%*#?&])[A-Za-z\d$@$!%*#?&]{8,}$'
-            REGEX_PHONE_NUMBER	 = '^01([0|1|6|7|8|9])-?([0-9]{3,4})-?([0-9]{4})$'
-            REGEX_BIRTHDATE	 = '^(19[0-9][0-9]|20\d{2})-(0[0-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])$'
+            REGEX_EMAIL        = '^[a-zA-Z0-9+-_.]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
+            REGEX_PASSWORD     = '^(?=.*[A-Za-z])(?=.*\d)(?=.*[$@$!%*#?&])[A-Za-z\d$@$!%*#?&]{8,}$'
+            REGEX_PHONE_NUMBER = '^01([0|1|6|7|8|9])-?([0-9]{3,4})-?([0-9]{4})$'
+            REGEX_BIRTHDATE    = '^(19[0-9][0-9]|20\d{2})-(0[0-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])$'
             
             if not re.match(REGEX_EMAIL, email):
                 return JsonResponse({'message':'INVALID_EMAIL'}, status=400)

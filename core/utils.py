@@ -22,3 +22,5 @@ def login_confirm(func):
         return func(self, request, *args, **kwargs)
 
     return wrapper
+
+
