@@ -11,6 +11,7 @@ from core.utils      import *
 
 ####### ~7/29 최종 ##########
 
+
 class ProductListView(View):
     def get(self, request):
         try:
@@ -21,8 +22,13 @@ class ProductListView(View):
             category_id     = request.GET.get('category_id', None)
             sub_category_id = request.GET.get('sub_category_id', None)
             limit           = int(request.GET.get('limit', DEFAULT_LIMIT))
-            offset          = int(request.GET.get('offset', DEFAULT_OFFSET))
+            offset          = request.GET.get('offset', DEFAULT_OFFSET))
             sort_type       = request.GET.get('sort_type', 'id')
+
+            color_name  = request.GET.get('color')
+            brand_id    = request.GET.get('brand_id')
+            price_range = request.GET.get('price_range', None)
+            # 1: 10만원 이하,  2: 50만원 이하,  3: 100만원이하
 
             q = Q()
 
@@ -33,6 +39,17 @@ class ProductListView(View):
             if sub_category_id:
                 sub_category = SubCategory.objects.get(id = sub_category_id)
                 q           &= Q(sub_category = sub_category)
+
+            if color_name:
+                color = Color.objects.get(english_name=color_name)
+                q    &= Q(color=color)
+
+            if brand_id:
+                brand = Brand.objects.get(id=brand_id)
+                q    &= Q(furniture__brand=brand)
+            
+            if price_range:
+                q &= Q(price__lte = PRICE_RANGE[int(price_range)])
 
             count = Product.objects.filter(q).count()   
 
@@ -91,7 +108,7 @@ class ProductDetailView(View):
         except Product.DoesNotExist:
             return JsonResponse({'message': 'INVALID_PRODUCT_ID'}, status=400)
 
-class SubCategoryView(View):
+class CategoryView(View):
     def get(self, request):
         category_list     = [{
             'id': category.id, 
@@ -106,7 +123,7 @@ class SubCategoryView(View):
 
         return JsonResponse({'message': 'SUCCESS', 'category_list': category_list,'sub_category_list': sub_category_list}, status=200)
 
-###### 여기까지 #######3
+###### 여기까지 #######
 
 
 # # class ListView_draft(View):
